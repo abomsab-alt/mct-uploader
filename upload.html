@@ -20,6 +20,9 @@ button{background:#0b3c5d;border:none;color:#fff;cursor:pointer;}
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <script>
+// إصلاح: تشغيل السكربت بعد تحميل الصفحة
+document.addEventListener("DOMContentLoaded", () => {
+
 const firebaseConfig = {
   apiKey: "AIzaSyBOoR93CxFz31TF6aae97HS1XWFCS8K_GI",
   authDomain: "mct-bi.firebaseapp.com",
@@ -29,6 +32,7 @@ const firebaseConfig = {
   messagingSenderId: "1037778823546",
   appId: "1:1037778823546:web:724648031792ef6f5e4ec3"
 };
+
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
@@ -46,12 +50,13 @@ function extractTermKey(text){
   return `${year[0]}-${term}`;
 }
 
-async function uploadCSV(){
+window.uploadCSV = async function () {
+
   let file = document.getElementById("csv").files[0];
-  if(!file){alert("اختر ملف CSV");return;}
+  if(!file){ alert("اختر ملف CSV"); return; }
 
   let raw = await file.text();
-  let rows = raw.split(/\r?\n/).filter(r=>r.trim()!=="");
+  let rows = raw.split(/\r?\n/).filter(r=>r.trim()!="");
 
   let header = rows[0].split(",");
 
@@ -70,12 +75,12 @@ async function uploadCSV(){
   let list = [];
   let termKey = null;
 
-  for(let i=1;i<rows.length;i++){
+  for (let i=1;i<rows.length;i++){
     let c = rows[i].split(",");
-    if(c.length<10) continue;
+    if(c.length < 9) continue;
 
-    let termCell = c[idx.term];
-    if(!termKey) termKey = extractTermKey(termCell);
+    let t = c[idx.term];
+    if(!termKey) termKey = extractTermKey(t);
 
     list.push({
       approved_hours: c[idx.hours],
@@ -86,7 +91,7 @@ async function uploadCSV(){
       student_id: c[idx.sid],
       major: c[idx.major],
       department: c[idx.dept],
-      term: termCell,
+      term: t,
       term_key: termKey
     });
   }
@@ -100,7 +105,9 @@ async function uploadCSV(){
 
   document.getElementById("msg").innerHTML =
     "✔ تم رفع " + list.length + " سجل إلى الفصل: " + termKey;
-}
+};
+
+}); // END DOMContentLoaded
 </script>
 
 </head>
