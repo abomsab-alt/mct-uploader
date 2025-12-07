@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>رفع CSV – TVTC BI</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<style>
+body{font-family:'Cairo',sans-serif;background:#f3f5f9;padding:40px;text-align:center;}
+.card{background:#fff;padding:25px;border-radius:16px;max-width:480px;margin:auto;
+      box-shadow:0 4px 12px rgba(0,0,0,.1);}
+input,button{width:100%;padding:12px;border-radius:10px;margin-top:15px;font-size:15px;}
+button{background:#0b3c5d;border:none;color:#fff;cursor:pointer;}
+#msg{margin-top:20px;font-size:14px;font-weight:700;}
+</style>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBOoR93CxFz31TF6aae97HS1XWFCS8K_GI",
+  authDomain: "mct-bi.firebaseapp.com",
+  databaseURL: "https://mct-bi-default-rtdb.firebaseio.com",
+  projectId: "mct-bi",
+  storageBucket: "mct-bi.firebasestorage.app",
+  messagingSenderId: "1037778823546",
+  appId: "1:1037778823546:web:724648031792ef6f5e4ec3"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+function clean(t){return t.replace(/\s/g,"").trim();}
+function findIndex(h,k){
+  k = clean(k);
+  for(let i=0;i<h.length;i++){ if(clean(h[i]).includes(k)) return i; }
+  return -1;
+}
+function extractTermKey(text){
+  if(!text) return null;
+  let year = text.match(/\d{4}/);
+  if(!year) return null;
+  let term = text.includes("الثاني") ? "T2" : "T1";
+  return `${year[0]}-${term}`;
+}
+
+async function uploadCSV(){
+  let file = document.getElementById("csv").files[0];
+  if(!file){alert("اختر ملف CSV");return;}
+
+  let raw = await file.text();
+  let rows = raw.split(/\r?\n/).filter(r=>r.trim()!=="");
+
+  let header = rows[0].split(",");
+
+  let idx = {
+    hours: findIndex(header,"س.معتمدة"),
+    crn: findIndex(header,"الرقمالمرجعي"),
+    cname: findIndex(header,"اسمالمقرر"),
+    ccode: findIndex(header,"المقرر"),
+    sname: findIndex(header,"اسم"),
+    sid: findIndex(header,"رقمالطالب"),
+    major: findIndex(header,"التخصص"),
+    dept: findIndex(header,"القسم"),
+    term: findIndex(header,"الفصلالتدريبي")
+  };
+
+  let list = [];
+  let termKey = null;
+
+  for(let i=1;i<rows.length;i++){
+    let c = rows[i].split(",");
+    if(c.length<10) continue;
+
+    let termCell = c[idx.term];
+    if(!termKey) termKey = extractTermKey(termCell);
+
+    list.push({
+      approved_hours: c[idx.hours],
+      crn: c[idx.crn],
+      course_name: c[idx.cname],
+      course_code: c[idx.ccode],
+      student_name: c[idx.sname],
+      student_id: c[idx.sid],
+      major: c[idx.major],
+      department: c[idx.dept],
+      term: termCell,
+      term_key: termKey
+    });
+  }
+
+  if(!termKey){
+    document.getElementById("msg").innerHTML = "❌ لم يتم التعرف على الفصل التدريبي";
+    return;
+  }
+
+  await db.ref("terms/"+termKey).set(list);
+
+  document.getElementById("msg").innerHTML =
+    "✔ تم رفع " + list.length + " سجل إلى الفصل: " + termKey;
+}
+</script>
+
+</head>
+<body>
+<div class="card">
+<h2>📤 رفع بيانات CSV</h2>
+<input type="file" id="csv" accept=".csv">
+<button onclick="uploadCSV()">رفع البيانات</button>
+<div id="msg"></div>
+</div>
+</body>
+</html>
